@@ -34,15 +34,16 @@ pub fn invoke_capability(
             data.len() as i64,
         )
     };
+    println!("{capability_name_ptr}");
 
-    if out_ptr == 0 {
+    if out_ptr < 0 {
         // A return value of 0 is used to signal that an error occurred.
         // TODO: We should probably start returning a signed integer instead and use negative
         // numbers to signal specific errors.
-        return Err(anyhow!("invoke_capability failed"));
+        return Err(anyhow!("invoke_capability failed: {out_ptr}"));
     }
 
-    get_bytes_from_host(out_ptr)
+    get_bytes_from_host(out_ptr as usize)
 }
 
 ///
@@ -50,9 +51,11 @@ pub fn invoke_capability(
 /// Source: https://radu-matei.com/blog/practical-guide-to-wasm-memory/#exchanging-strings-between-modules-and-runtimes
 ///
 #[no_mangle]
-pub fn alloc(len: usize) -> *mut u8 {
+pub fn alloc(len: i64) -> *mut u8 {
+    assert!(len > 0);
+
     // create a new mutable buffer with capacity `len`
-    let mut buf = Vec::with_capacity(len);
+    let mut buf = Vec::with_capacity(len as usize);
     // take a mutable pointer to the buffer
     let ptr = buf.as_mut_ptr();
     // take ownership of the memory block and ensure that its destructor is not called when the
@@ -89,7 +92,7 @@ fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
 
     // ptr points to a i64, followed by N bytes of data intended for us. That first i64 tells us
     // what the value of N is.
-    let mut len_buf: [u8; 4] = [0; 4]; // todo nicer
+    let mut len_buf = [0u8; size_of::<i64>()];
     let num_bytes = unsafe {
         let ptr = &*(ptr as *const u8);
         std::ptr::copy(ptr, len_buf.as_mut_ptr(), size_of::<i64>());
