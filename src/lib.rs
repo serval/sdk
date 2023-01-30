@@ -13,10 +13,8 @@ extern "C" {
     ) -> usize;
 }
 
-///
 /// Invokes the capability with the give name, passing along an arbitrary blob of data. returns the
 /// data returned by the capability.
-///
 pub fn invoke_capability(
     capability_name: String,
     data: &Vec<u8>,
@@ -45,10 +43,8 @@ pub fn invoke_capability(
     get_bytes_from_host(out_ptr)
 }
 
-///
 /// Allocate memory into the module's linear memory and return the offset to the start of the block.
 /// Source: https://radu-matei.com/blog/practical-guide-to-wasm-memory/#exchanging-strings-between-modules-and-runtimes
-///
 #[no_mangle]
 pub fn alloc(len: usize) -> *mut u8 {
     // create a new mutable buffer with capacity `len`
@@ -63,12 +59,10 @@ pub fn alloc(len: usize) -> *mut u8 {
     ptr
 }
 
-///
 /// Deallocates a chunk of memory that was originally allocated with our `alloc` function.
 /// Source: https://radu-matei.com/blog/practical-guide-to-wasm-memory/#exchanging-strings-between-modules-and-runtimes
 /// # Safety
 /// See the docs on [Vec#from_raw_parts](https://doc.rust-lang.org/std/vec/struct.Vec.html#method.from_raw_parts)
-///
 #[no_mangle]
 pub unsafe fn dealloc(ptr: *mut u8, size: usize) {
     let data = Vec::from_raw_parts(ptr, size, size);
@@ -76,14 +70,12 @@ pub unsafe fn dealloc(ptr: *mut u8, size: usize) {
     std::mem::drop(data);
 }
 
-///
 /// Retrieves a blob of bytes that the host environment is trying to pass to us. Since we can only
 /// communicate by passing around single numbers, the way the Serval host envioronment works is by
 /// asking us (the guest) to allocate N + 4 bytes of memory, where N is the number of bytes of data
 /// that they're trying to send us. The host writes N as a u32 into the first 4 bytes of the memory
 /// range. When we receive a pointer, we read a u32 from it to figure out how many bytes of data to
 /// read, read the data, and then clean up the entire memory allocation afterwards.
-///
 fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
     // TODO: figure out how to make this unsafe stuff sufficiently safe to sleep at night.
 
