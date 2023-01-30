@@ -89,7 +89,7 @@ fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
 
     // ptr points to a u32, followed by N bytes of data intended for us. That first u32 tells us
     // what the value of N is.
-    let mut len_buf: [u8; 4] = [0; 4]; // todo nicer
+    let mut len_buf = [0u8; size_of::<i32>()];
     let num_bytes = unsafe {
         let ptr = &*(ptr as *const u8);
         std::ptr::copy(ptr, len_buf.as_mut_ptr(), size_of::<u32>());
