@@ -6,11 +6,11 @@ use std::mem::size_of;
 extern "C" {
     #[link_name = "invoke_capability"]
     fn invoke_capability_raw(
-        capability_name_ptr: u32,
-        capability_name_len: u32,
-        data_ptr: u32,
-        data_len: u32,
-    ) -> usize;
+        capability_name_ptr: i64,
+        capability_name_len: i64,
+        data_ptr: i64,
+        data_len: i64,
+    ) -> i64;
 }
 
 ///
@@ -22,16 +22,16 @@ pub fn invoke_capability(
     data: &Vec<u8>,
 ) -> Result<Vec<u8>, anyhow::Error> {
     let capability_name_bytes = capability_name.into_bytes();
-    let capability_name_ptr = capability_name_bytes.as_ptr() as u32;
+    let capability_name_ptr = capability_name_bytes.as_ptr() as i64;
 
-    let data_ptr = data.as_ptr() as u32;
+    let data_ptr = data.as_ptr() as i64;
 
     let out_ptr = unsafe {
         invoke_capability_raw(
             capability_name_ptr,
-            capability_name_bytes.len() as u32,
+            capability_name_bytes.len() as i64,
             data_ptr,
-            data.len() as u32,
+            data.len() as i64,
         )
     };
 
@@ -80,26 +80,26 @@ pub unsafe fn dealloc(ptr: *mut u8, size: usize) {
 /// Retrieves a blob of bytes that the host environment is trying to pass to us. Since we can only
 /// communicate by passing around single numbers, the way the Serval host envioronment works is by
 /// asking us (the guest) to allocate N + 4 bytes of memory, where N is the number of bytes of data
-/// that they're trying to send us. The host writes N as a u32 into the first 4 bytes of the memory
-/// range. When we receive a pointer, we read a u32 from it to figure out how many bytes of data to
+/// that they're trying to send us. The host writes N as a i64 into the first 4 bytes of the memory
+/// range. When we receive a pointer, we read a i64 from it to figure out how many bytes of data to
 /// read, read the data, and then clean up the entire memory allocation afterwards.
 ///
 fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
     // TODO: figure out how to make this unsafe stuff sufficiently safe to sleep at night.
 
-    // ptr points to a u32, followed by N bytes of data intended for us. That first u32 tells us
+    // ptr points to a i64, followed by N bytes of data intended for us. That first i64 tells us
     // what the value of N is.
     let mut len_buf: [u8; 4] = [0; 4]; // todo nicer
     let num_bytes = unsafe {
         let ptr = &*(ptr as *const u8);
-        std::ptr::copy(ptr, len_buf.as_mut_ptr(), size_of::<u32>());
-        u32::from_le_bytes(len_buf)
+        std::ptr::copy(ptr, len_buf.as_mut_ptr(), size_of::<i64>());
+        i64::from_le_bytes(len_buf)
     };
 
     // Now that we know how many bytes of data there are, we can read 'em into a buffer
     let bytes: Vec<u8> = unsafe {
         let mut buf = vec![0; num_bytes as usize];
-        let ptr = &*((ptr + size_of::<u32>()) as *const u8);
+        let ptr = &*((ptr + size_of::<i64>()) as *const u8);
         std::ptr::copy(ptr, buf.as_mut_ptr(), num_bytes as usize);
         buf
     };
@@ -107,7 +107,7 @@ fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
     // The block of memory at ptr was allocated by the host calling into our alloc function; now
     // that we have read the data they were trying to pass to us, we can clean up that temporary
     // allocation.
-    let alloc_size = size_of::<u32>() + num_bytes as usize;
+    let alloc_size = size_of::<i64>() + num_bytes as usize;
     unsafe {
         let ptr = ptr as *mut u8;
         dealloc(ptr, alloc_size);
