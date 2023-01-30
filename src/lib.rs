@@ -10,7 +10,7 @@ extern "C" {
         capability_name_len: u32,
         data_ptr: u32,
         data_len: u32,
-    ) -> usize;
+    ) -> i32;
 }
 
 /// Invokes the capability with the give name, passing along an arbitrary blob of data. returns the
@@ -33,14 +33,16 @@ pub fn invoke_capability(
         )
     };
 
-    if out_ptr == 0 {
+    if out_ptr < 0 {
         // A return value of 0 is used to signal that an error occurred.
         // TODO: We should probably start returning a signed integer instead and use negative
         // numbers to signal specific errors.
-        return Err(anyhow!("invoke_capability failed"));
+        return Err(anyhow!(
+            "invoke_capability failed with error code {out_ptr}"
+        ));
     }
 
-    get_bytes_from_host(out_ptr)
+    get_bytes_from_host(out_ptr as usize)
 }
 
 /// Allocate memory into the module's linear memory and return the offset to the start of the block.
