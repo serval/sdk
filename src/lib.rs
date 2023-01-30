@@ -5,7 +5,7 @@ use std::mem::size_of;
 #[link(wasm_import_module = "serval")]
 extern "C" {
     #[link_name = "invoke_capability"]
-    fn invoke_capability_raw(
+    fn invoke_raw(
         capability_name_ptr: u32,
         capability_name_len: u32,
         data_ptr: u32,
