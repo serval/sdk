@@ -4,30 +4,22 @@ use std::mem::size_of;
 // Declare all of the host functions we need
 #[link(wasm_import_module = "serval")]
 extern "C" {
-    #[link_name = "invoke_capability"]
-    fn invoke_raw(
-        capability_name_ptr: u32,
-        capability_name_len: u32,
-        data_ptr: u32,
-        data_len: u32,
-    ) -> i32;
+    #[link_name = "invoke_raw"]
+    fn invoke_raw(name_ptr: u32, name_len: u32, data_ptr: u32, data_len: u32) -> i32;
 }
 
-/// Invokes the capability with the give name, passing along an arbitrary blob of data. returns the
-/// data returned by the capability.
-pub fn invoke_capability(
-    capability_name: String,
-    data: &Vec<u8>,
-) -> Result<Vec<u8>, anyhow::Error> {
-    let capability_name_bytes = capability_name.into_bytes();
-    let capability_name_ptr = capability_name_bytes.as_ptr() as u32;
+/// Invokes the extension with the give name, passing along an arbitrary blob of data. returns the
+/// data returned by the extension.
+pub fn invoke_extension(extension_name: String, data: &Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
+    let extension_name_bytes = extension_name.into_bytes();
+    let extension_name_ptr = extension_name_bytes.as_ptr() as u32;
 
     let data_ptr = data.as_ptr() as u32;
 
     let out_ptr = unsafe {
-        invoke_capability_raw(
-            capability_name_ptr,
-            capability_name_bytes.len() as u32,
+        invoke_raw(
+            extension_name_ptr,
+            extension_name_bytes.len() as u32,
             data_ptr,
             data.len() as u32,
         )
