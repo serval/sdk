@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use std::mem::size_of;
 
 // Declare all of the host functions we need
@@ -8,9 +7,16 @@ extern "C" {
     fn invoke_raw(name_ptr: u32, name_len: u32, data_ptr: u32, data_len: u32) -> i32;
 }
 
+#[derive(Clone, Debug)]
+pub enum ServalSDKError {
+    // Calling into invoke_raw failed with the given error code; at some point we may want to break
+    // the error code out into separate errors but this is fine for now.
+    InvokeExtensionError(i32),
+}
+
 /// Invokes the extension with the give name, passing along an arbitrary blob of data. returns the
 /// data returned by the extension.
-pub fn invoke_extension(extension_name: String, data: &Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
+pub fn invoke_extension(extension_name: String, data: &Vec<u8>) -> Result<Vec<u8>, ServalSDKError> {
     let extension_name_bytes = extension_name.into_bytes();
     let extension_name_ptr = extension_name_bytes.as_ptr() as u32;
 
@@ -29,9 +35,7 @@ pub fn invoke_extension(extension_name: String, data: &Vec<u8>) -> Result<Vec<u8
         // A return value of 0 is used to signal that an error occurred.
         // TODO: We should probably start returning a signed integer instead and use negative
         // numbers to signal specific errors.
-        return Err(anyhow!(
-            "invoke_capability failed with error code {out_ptr}"
-        ));
+        return Err(ServalSDKError::InvokeExtensionError(out_ptr));
     }
 
     get_bytes_from_host(out_ptr as usize)
@@ -70,7 +74,7 @@ pub unsafe fn dealloc(ptr: *mut u8, size: usize) {
 /// that they're trying to send us. The host writes N as a u32 into the first 4 bytes of the memory
 /// range. When we receive a pointer, we read a u32 from it to figure out how many bytes of data to
 /// read, read the data, and then clean up the entire memory allocation afterwards.
-fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, anyhow::Error> {
+fn get_bytes_from_host(ptr: usize) -> Result<Vec<u8>, ServalSDKError> {
     // TODO: figure out how to make this unsafe stuff sufficiently safe to sleep at night.
 
     // ptr points to a u32, followed by N bytes of data intended for us. That first u32 tells us
